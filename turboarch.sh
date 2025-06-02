@@ -19,9 +19,7 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
-
 if [ ! -f config.default ]; then
-
     UID_MIN=$(grep '^UID_MIN' /etc/login.defs | sed 's/[^0-9]//g')
     UID_MAX=$(grep '^UID_MAX' /etc/login.defs | sed 's/[^0-9]//g')
 
@@ -36,49 +34,38 @@ if [ ! -f config.default ]; then
         getent shadow root  > shadow_delta
         getent group root   > group_delta
         getent gshadow root > gshadow_delta
-
         normaluid=1000
-
         for d in $(getent passwd | awk -F: "(\$3 >= $UID_MIN && \$3 <= $UID_MAX) {printf \"%s\n\",\$1}") ; do
-
             IFS=':' read -r -a arr <<< "$(getent group "$d")"
             echo "${arr[0]}:${arr[1]}:$normaluid:${arr[3]}" >> group_delta
-
             IFS=':' read -r -a arr <<< "$(getent passwd "$d")"
             echo "${arr[0]}:${arr[1]}:$normaluid:$normaluid:${arr[4]}:${arr[5]}:${arr[6]}" >> passwd_delta
-
             if id -G -n "$d" | grep -qw 'sudo\|wheel'; then
                 printf "Found user (sudo/wheel): %s", "$d"
                 echo "$d" >> wheel_users
             else
                 printf "Found user: %s", "$d"
             fi
-
             if [[ "${arr[2]}" != "$normaluid" ]]; then
                 printf " (uid %s -> %s)" "${arr[2]}" "$normaluid"
             else
                 printf " (uid %s)" "${arr[2]}"
             fi
-
             printf "\n"
-
             ((normaluid+=1))
-
-      # getent shadow есть только в glibc
-      getent gshadow &> /dev/null
-      if [[ "$?" == "1" ]]; then
-          grep "^$d:" /etc/gshadow >> gshadow_delta
-          grep "^$d:" /etc/shadow >> shadow_delta
-      else
-          getent gshadow "$d" >> gshadow_delta
-          getent shadow "$d"  >> shadow_delta
-      fi
-
-  done
-  SET_SPACE_PASSWORD=0
+            getent gshadow &> /dev/null
+            if [[ "$?" == "1" ]]; then
+                grep "^$d:" /etc/gshadow >> gshadow_delta
+                grep "^$d:" /etc/shadow >> shadow_delta
+            else
+                getent gshadow "$d" >> gshadow_delta
+                getent shadow "$d"  >> shadow_delta
+            fi
+        done
+        SET_SPACE_PASSWORD=0
     fi
-
     NETWORKMANAGER=1
+
     read -p "Do you want to install GNOME? [Y/n] " -r yn
     if [[ $yn == [Nn]* ]]; then
         GNOME=0
@@ -95,7 +82,6 @@ if [ ! -f config.default ]; then
     if [ -z "$NEWHOSTNAME" ]; then
         NEWHOSTNAME=archlinux
     fi
-
     LOCALTIME=$(cat /etc/timezone 2> /dev/null)
     if [ -z "$LOCALTIME" ]; then
         LOCALTIME="$(timedatectl | grep 'Time zone' | sed 's/.*Time zone: //;s/ .*//')"
@@ -110,11 +96,11 @@ if [ ! -f config.default ]; then
     if [ -z "$LOCALTIME" ]; then
         LOCALTIME="Europe/Moscow"
     fi
+
     read -p "Set timezone for new system in \"region/city\" format: [$LOCALTIME] " -r INPUTLOCALTIME
     if [ -n "$INPUTLOCALTIME" ]; then
         LOCALTIME=$INPUTLOCALTIME
     fi
-
     SRAKUT=0
     if [[ $(dmsetup ls) != "No devices found" ]] && command -v dmsetup &> /dev/null; then
         echo -e "\e[1m\e[40m\e[93mWARNING: CRAZY DISK CONFIGURATION FOUND (LUKS/LVM)\e[0m"
@@ -126,13 +112,12 @@ if [ ! -f config.default ]; then
             SRAKUT=1
         fi
     fi
-
     REFLECTOR=1
+
     read -p "Do you want to use reflector to select fastest mirrors? Otherwise, mirrors from 'mirrorlist.default' will be used. [Y/n] " -r yn
     if [[ $yn == [Nn]* ]]; then
         REFLECTOR=0
     fi
-
     echo "GNOME=$GNOME" > config
     {
         echo "SET_SPACE_PASSWORD=$SET_SPACE_PASSWORD"
@@ -148,21 +133,21 @@ else
     cp config.default config
 fi
 
-
 set -e
 
 if [ -d '/archlinux-bootstrap' ]; then
     echo 'Found /archlinux-bootstrap, using existing'
 else
     echo 'Downloading archlinux-bootstrap'
+    URL="https://geo.mirror.pkgbuild.com/iso/latest/archlinux-bootstrap-x86_64.tar.zst"
+    NAME="archlinux-bootstrap.tar.zst"
     if command -v curl &> /dev/null; then
-        curl -L -o archlinux-bootstrap.tar.zst https://geo.mirror.pkgbuild.com/iso/latest/archlinux-bootstrap-x86_64.tar.zst
+        curl -L -o ${NAME} ${URL}
     else
-        wget -O archlinux-bootstrap.tar.zst https://geo.mirror.pkgbuild.com/iso/latest/archlinux-bootstrap-x86_64.tar.zst
+        wget -O ${NAME} ${URL}
     fi
-
     echo 'Extracting archlinux-bootstrap'
-    tar -x -f archlinux-bootstrap.tar.zst -C /
+    tar -x -f ${NAME} -C /
     mv /root.x86_64 /archlinux-bootstrap
 fi
 
@@ -190,8 +175,6 @@ if [ -f passwd_delta ]; then
     grep "\S" gshadow_delta > /turboarch-config/gshadow_delta
 fi
 
-#cp -r /etc/lvm /turboarch-config
-#cp -r /etc/NetworkManager /turboarch-config
 cp mirrorlist.default /turboarch-config
 
 cp /etc/fstab /turboarch-config
@@ -203,7 +186,6 @@ cp dracut-install /turboarch-config
 cp dracut-remove /turboarch-config
 
 cp config /turboarch-config/config
-
 
 dmesg -n 1
 

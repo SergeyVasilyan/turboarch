@@ -8,7 +8,6 @@ if [ -f /turboarch-config/wheel_users ]; then
         echo -e "\e[1m\e[46m\e[97mADD USER $p TO GROUP wheel\e[0m"
         usermod -a -G wheel "$p"
     done < /turboarch-config/wheel_users
-
     echo "%wheel ALL=(ALL:ALL) ALL" > /etc/sudoers.d/00_wheel
 fi
 
@@ -36,13 +35,10 @@ fi
 
 rm -rf /boot/*
 
-
 if [ "$SRAKUT" -eq 1  ]; then
     echo -e "\e[1m\e[40m\e[93mINSTALLING DRACUT AND LVM2\e[0m"
     pacman --noconfirm -Sy lvm2 mdadm dracut
-
     echo -e "\e[1m\e[40m\e[93mINSTALL DRACUT HOOKS\e[0m"
-
     install -Dm644 /turboarch-config/90-dracut-install.hook /usr/share/libalpm/hooks/90-dracut-install.hook
     install -Dm644 /turboarch-config/60-dracut-remove.hook /usr/share/libalpm/hooks/60-dracut-remove.hook
     install -Dm755 /turboarch-config/dracut-install /usr/share/libalpm/scripts/dracut-install
@@ -54,24 +50,20 @@ fi
 
 pacman --noconfirm -Sy linux linux-firmware
 
-
 if [ "$GNOME" -eq 1  ]; then
     echo -e "\e[1m\e[46m\e[97mINSTALLING GNOME\e[0m"
     pacman --noconfirm -Sy gnome gnome-tweaks
     systemctl enable gdm
-
-  for d in /home/*/ ; do
-      echo "$d"
-      rm -rf "$d/.config/dconf"
-      rm -rf "$d/.config/gtk-3.0"
-      rm -rf "$d/.config/gtk-4.0"
-      rm -rf "$d/.cache/*"
-
-      rm -rf "$d/.local/share/themes"
-      rm -rf "$d/.local/share/icons"
-
-      rm -rf "$d/.themes"
-      rm -rf "$d/.icons"
+    for d in /home/*/ ; do
+        echo "$d"
+        rm -rf "$d/.config/dconf"
+        rm -rf "$d/.config/gtk-3.0"
+        rm -rf "$d/.config/gtk-4.0"
+        rm -rf "$d/.cache/*"
+        rm -rf "$d/.local/share/themes"
+        rm -rf "$d/.local/share/icons"
+        rm -rf "$d/.themes"
+        rm -rf "$d/.icons"
   done
 fi
 
@@ -93,14 +85,12 @@ else
         dev=$(findmnt -n -o SOURCE / | sed 's/ .*//;s/\/dev\///;s/\[.*//')
     fi
     target=$(basename "$(readlink -f "/sys/class/block/$dev/..")")
-
     if [ -z "$target" ]; then
         echo -e "\e[1m\e[40m\e[93mCANNOT FIND DEVICE ON / FOR SOME REASON\e[0m"
         lsblk
         read -p "Enter drive for GRUB installation (e.g. sda or nvme0n1): " -r target
 
     fi
-
     echo -e "\e[1m\e[46m\e[97mINSTALLING GRUB (BIOS) ON $target\e[0m"
     env -i grub-install --target=i386-pc "/dev/$target"
     cp -r /usr/lib/grub/i386-pc /boot/grub
